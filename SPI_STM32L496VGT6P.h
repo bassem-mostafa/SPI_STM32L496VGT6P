@@ -73,7 +73,7 @@ extern "C"
     // #############################################################################
 
     /**
-     *  @brief SPI STM32L496VGT6P Operation Status Type
+     *  @brief SPI STM32L496VGT6P Operation Status
      *
      *  @enum SPI_STM32L496VGT6P_Status_t
      */
@@ -88,7 +88,7 @@ extern "C"
     } SPI_STM32L496VGT6P_Status_t;
 
     /**
-     *  @brief SPI STM32L496VGT6P Type
+     *  @brief SPI STM32L496VGT6P
      *
      *  @enum SPI_STM32L496VGT6P_t
      */
@@ -101,30 +101,47 @@ extern "C"
     } SPI_STM32L496VGT6P_t;
 
     /**
-     *  @brief SPI STM32L496VGT6P Instance Context Type
+     *  @brief SPI STM32L496VGT6P Instance (Forward Declaration)
+     */
+    typedef struct SPI_STM32L496VGT6P_Instance SPI_STM32L496VGT6P_Instance_t;
+
+    /**
+     *  @brief SPI STM32L496VGT6P Callback On Complete
+     */
+    typedef void ( *SPI_STM32L496VGT6P_CallbackOnComplete_t )( SPI_STM32L496VGT6P_Instance_t * Instance, SPI_STM32L496VGT6P_Status_t Status );
+
+    /**
+     *  @brief SPI STM32L496VGT6P Instance Context
      *
      *  @struct SPI_STM32L496VGT6P_Instance_Context_t
      */
     typedef struct SPI_STM32L496VGT6P_Instance_Context SPI_STM32L496VGT6P_Instance_Context_t;
 
     /**
-     *  @brief SPI STM32L496VGT6P Instance Type
+     *  @brief SPI STM32L496VGT6P Instance
      *
      *  @struct SPI_STM32L496VGT6P_Instance_t
      */
     typedef struct SPI_STM32L496VGT6P_Instance
     {
         SPI_STM32L496VGT6P_t SPIx;
+
+        GPIO_t SCK;
+        GPIO_t MOSI;
+        GPIO_t MISO;
+
+        SPI_STM32L496VGT6P_CallbackOnComplete_t OnComplete;
+
         SPI_STM32L496VGT6P_Instance_Context_t * Context;
     } SPI_STM32L496VGT6P_Instance_t;
 
     /**
-     *  @brief SPI STM32L496VGT6P Data Type
+     *  @brief SPI STM32L496VGT6P Data
      */
     typedef uint8_t SPI_STM32L496VGT6P_Data_t;
 
     /**
-     *  @brief SPI STM32L496VGT6P Data Length Type
+     *  @brief SPI STM32L496VGT6P Data Length
      */
     typedef uint32_t SPI_STM32L496VGT6P_DataLength_t;
 
@@ -194,11 +211,14 @@ extern "C"
      */
     SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Transaction( SPI_STM32L496VGT6P_Instance_t * Instance, SPI_STM32L496VGT6P_Data_t * DataTx, SPI_STM32L496VGT6P_DataLength_t DataTxLength, SPI_STM32L496VGT6P_Data_t * DataRx, SPI_STM32L496VGT6P_DataLength_t DataRxLength );
 
-    // TODO Add More APIs
-
     // #############################################################################
     // #### Public Variable(s) #####################################################
     // #############################################################################
+
+    /**
+     *  @brief Version
+     */
+    extern const char SPI_STM32L496VGT6P_VERSION[];
 
     // #############################################################################
     // #### File Guard #############################################################
