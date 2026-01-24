@@ -907,9 +907,9 @@ static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationTransmitExecute( 
 
         HAL_StatusTypeDef HAL_Status = HAL_ERROR;
     #if USE_DMA
-        if ( ( HAL_Status = HAL_SPI_Transmit_DMA( &Instance->Context->SPIx, Operation->Context.DataTx, Operation->Context.DataTxLength ) ) != HAL_OK )
+        if ( ( HAL_Status = HAL_SPI_Transmit_DMA( &Context->SPIx, Operation->Context.DataTx, Operation->Context.DataTxLength ) ) != HAL_OK )
     #else
-        if ( ( HAL_Status = HAL_SPI_Transmit_IT( &Instance->Context->SPIx, Operation->Context.DataTx, Operation->Context.DataTxLength ) ) != HAL_OK )
+        if ( ( HAL_Status = HAL_SPI_Transmit_IT( &Context->SPIx, Operation->Context.DataTx, Operation->Context.DataTxLength ) ) != HAL_OK )
     #endif
         {
             Status = SPI_STM32L496VGT6P_Status_Error;
@@ -985,9 +985,9 @@ static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationReceiveExecute( S
 
         HAL_StatusTypeDef HAL_Status = HAL_ERROR;
     #if USE_DMA
-        if ( ( HAL_Status = HAL_SPI_Receive_DMA( &Instance->Context->SPIx, Operation->Context.DataRx, Operation->Context.DataRxLength ) ) != HAL_OK )
+        if ( ( HAL_Status = HAL_SPI_Receive_DMA( &Context->SPIx, Operation->Context.DataRx, Operation->Context.DataRxLength ) ) != HAL_OK )
     #else
-        if ( ( HAL_Status = HAL_SPI_Receive_IT( &Instance->Context->SPIx, Operation->Context.DataRx, Operation->Context.DataRxLength ) ) != HAL_OK )
+        if ( ( HAL_Status = HAL_SPI_Receive_IT( &Context->SPIx, Operation->Context.DataRx, Operation->Context.DataRxLength ) ) != HAL_OK )
     #endif
         {
             Status = SPI_STM32L496VGT6P_Status_Error;
@@ -1063,9 +1063,9 @@ static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationTransactionExecut
 
         HAL_StatusTypeDef HAL_Status = HAL_ERROR;
     #if USE_DMA
-        if ( ( HAL_Status = HAL_SPI_TransmitReceive_DMA( &Instance->Context->SPIx, Operation->Context.DataTx, Operation->Context.DataRx, UTIL_Max( Operation->Context.DataTxLength, Operation->Context.DataRxLength ) ) ) != HAL_OK )
+        if ( ( HAL_Status = HAL_SPI_TransmitReceive_DMA( &Context->SPIx, Operation->Context.DataTx, Operation->Context.DataRx, UTIL_Max( Operation->Context.DataTxLength, Operation->Context.DataRxLength ) ) ) != HAL_OK )
     #else
-        if ( ( HAL_Status = HAL_SPI_TransmitReceive_IT( &Instance->Context->SPIx, Operation->Context.DataTx, Operation->Context.DataRx, UTIL_Max( Operation->Context.DataTxLength, Operation->Context.DataRxLength ) ) ) != HAL_OK )
+        if ( ( HAL_Status = HAL_SPI_TransmitReceive_IT( &Context->SPIx, Operation->Context.DataTx, Operation->Context.DataRx, UTIL_Max( Operation->Context.DataTxLength, Operation->Context.DataRxLength ) ) ) != HAL_OK )
     #endif
         {
             Status = SPI_STM32L496VGT6P_Status_Error;
@@ -1363,7 +1363,7 @@ SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Transaction( SPI_STM32L496VGT6P_I
 // #### Public Variable(s) #####################################################
 // #############################################################################
 
-const char SPI_STM32L496VGT6P_VERSION[] = "0.0.0.v20260124-1234";
+const char SPI_STM32L496VGT6P_VERSION[] = "0.0.0.v20260124-1653";
 
 // #############################################################################
 // #### File Guard #############################################################
