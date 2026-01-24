@@ -36,9 +36,9 @@
     #define DEBUG
 #endif
 
-// #ifdef DEBUG
-//    #undef DEBUG
-// #endif
+#ifdef DEBUG
+    #undef DEBUG
+#endif
 
 // #############################################################################
 // #### File Guard #############################################################
@@ -59,6 +59,8 @@
 // #############################################################################
 // #### Private Macro(s) #######################################################
 // #############################################################################
+
+    #define USE_DMA 1
 
 // #############################################################################
 // #### Private Type(s) ########################################################
@@ -153,6 +155,11 @@ typedef struct SPI_STM32L496VGT6P_Process
     SPI_STM32L496VGT6P_ProcessContext_t Context; ///< Context
 } SPI_STM32L496VGT6P_Process_t;
 
+/**
+ * @brief SPI STM32L496VGT6P Event
+ *
+ * @enum SPI_STM32L496VGT6P_Event_t
+ */
 typedef enum SPI_STM32L496VGT6P_Event
 {
     SPI_STM32L496VGT6P_Event_None = 0,
@@ -343,7 +350,7 @@ void HAL_SPI_AbortCpltCallback( SPI_HandleTypeDef * hspi )
 
 static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Context_Initialize( void )
 {
-    SPI_STM32L496VGT6P_Status_t Status = SPI_STM32L496VGT6P_Status_Error;
+    SPI_STM32L496VGT6P_Status_t Status = SPI_STM32L496VGT6P_Status_Success;
 
     do
     {
@@ -357,16 +364,19 @@ static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Context_Initialize( void )
         extern void MX_SPI1_Init( void );
         MX_SPI1_Init( );
         SPI_STM32L496VGT6P_Context.Context[ SPI_STM32L496VGT6P_1 ].SPIx = hspi1;
+        #if USE_DMA
         __HAL_LINKDMA( &SPI_STM32L496VGT6P_Context.Context[ SPI_STM32L496VGT6P_1 ].SPIx, hdmatx, hdma_spi1_tx );
-
+        #endif
         extern SPI_HandleTypeDef hspi2;
         extern DMA_HandleTypeDef hdma_spi2_tx;
         extern DMA_HandleTypeDef hdma_spi2_rx;
         extern void MX_SPI2_Init( void );
         MX_SPI2_Init( );
         SPI_STM32L496VGT6P_Context.Context[ SPI_STM32L496VGT6P_2 ].SPIx = hspi2;
+        #if USE_DMA
         __HAL_LINKDMA( &SPI_STM32L496VGT6P_Context.Context[ SPI_STM32L496VGT6P_2 ].SPIx, hdmatx, hdma_spi2_tx );
         __HAL_LINKDMA( &SPI_STM32L496VGT6P_Context.Context[ SPI_STM32L496VGT6P_2 ].SPIx, hdmarx, hdma_spi2_rx );
+        #endif
 
         extern SPI_HandleTypeDef hspi3;
         extern DMA_HandleTypeDef hdma_spi3_tx;
@@ -374,11 +384,11 @@ static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Context_Initialize( void )
         extern void MX_SPI3_Init( void );
         MX_SPI3_Init( );
         SPI_STM32L496VGT6P_Context.Context[ SPI_STM32L496VGT6P_3 ].SPIx = hspi3;
+        #if USE_DMA
         __HAL_LINKDMA( &SPI_STM32L496VGT6P_Context.Context[ SPI_STM32L496VGT6P_3 ].SPIx, hdmatx, hdma_spi3_tx );
         __HAL_LINKDMA( &SPI_STM32L496VGT6P_Context.Context[ SPI_STM32L496VGT6P_3 ].SPIx, hdmarx, hdma_spi3_rx );
+        #endif
     #endif
-
-        Status = SPI_STM32L496VGT6P_Status_Success;
     }
     while ( 0 );
 
@@ -387,7 +397,7 @@ static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Context_Initialize( void )
 
 static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Context_Cycle( void )
 {
-    SPI_STM32L496VGT6P_Status_t Status = SPI_STM32L496VGT6P_Status_Error;
+    SPI_STM32L496VGT6P_Status_t Status = SPI_STM32L496VGT6P_Status_Success;
 
     do
     {
@@ -399,8 +409,6 @@ static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Context_Cycle( void )
             Status = SPI_STM32L496VGT6P_Status_Error;
             break;
         }
-
-        Status = SPI_STM32L496VGT6P_Status_Success;
     }
     while ( 0 );
 
@@ -409,13 +417,11 @@ static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Context_Cycle( void )
 
 static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Context_DeInitialize( void )
 {
-    SPI_STM32L496VGT6P_Status_t Status = SPI_STM32L496VGT6P_Status_Error;
+    SPI_STM32L496VGT6P_Status_t Status = SPI_STM32L496VGT6P_Status_Success;
 
     do
     {
         SPI_Trace( "%s( void )", __FUNCTION__ );
-
-        Status = SPI_STM32L496VGT6P_Status_Success;
     }
     while ( 0 );
 
@@ -453,7 +459,7 @@ static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Instance_Initialize( SPI_S
 
 static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Instance_Cycle( SPI_STM32L496VGT6P_Instance_t * Instance )
 {
-    SPI_STM32L496VGT6P_Status_t Status = SPI_STM32L496VGT6P_Status_Error;
+    SPI_STM32L496VGT6P_Status_t Status = SPI_STM32L496VGT6P_Status_Success;
     do
     {
         SPI_Trace( "%s( Instance=%p )", __FUNCTION__, Instance );
@@ -461,6 +467,10 @@ static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Instance_Cycle( SPI_STM32L
         SPI_STM32L496VGT6P_Instance_Context_t * Context = &SPI_STM32L496VGT6P_Context.Context[ Instance->SPIx ];
         SPI_STM32L496VGT6P_Process_t * Process = &Context->Process;
         SPI_STM32L496VGT6P_Operation_t * Operation = &Process->Context.Operation;
+        SPI_STM32L496VGT6P_Event_t Event = Context->Event; // CAUTION: Has to copy events occurred at the early start of the cycle, so as to be cleared at the end of the cycle,
+                                                           //          which let events occurs after that for the next cycle call
+
+        // FIXME Interrupt callback occurs and cleared before being captured by ongoing operation
 
         if ( Operation->Handler != NULL )
         {
@@ -482,42 +492,40 @@ static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Instance_Cycle( SPI_STM32L
             }
         }
 
-        if ( ( Instance->Context->Event & SPI_STM32L496VGT6P_Event_Interrupt ) == SPI_STM32L496VGT6P_Event_Interrupt )
+        if ( ( Event & SPI_STM32L496VGT6P_Event_Interrupt ) == SPI_STM32L496VGT6P_Event_Interrupt )
         {
-            Instance->Context->Event &= ~SPI_STM32L496VGT6P_Event_Interrupt;
+            Context->Event &= ~SPI_STM32L496VGT6P_Event_Interrupt;
             SPI_Trace( "Interrupt: Instance=%p, SPIx=%d", Instance, Instance->SPIx );
             // TODO Invoke Callback
         }
 
-        if ( ( Instance->Context->Event & SPI_STM32L496VGT6P_Event_TxComplete ) == SPI_STM32L496VGT6P_Event_TxComplete )
+        if ( ( Event & SPI_STM32L496VGT6P_Event_TxComplete ) == SPI_STM32L496VGT6P_Event_TxComplete )
         {
-            Instance->Context->Event &= ~SPI_STM32L496VGT6P_Event_TxComplete;
+            Context->Event &= ~SPI_STM32L496VGT6P_Event_TxComplete;
             SPI_Debug( "TX Complete: Instance=%p, SPIx=%d", Instance, Instance->SPIx );
             // TODO Invoke Callback
         }
 
-        if ( ( Instance->Context->Event & SPI_STM32L496VGT6P_Event_RxComplete ) == SPI_STM32L496VGT6P_Event_RxComplete )
+        if ( ( Event & SPI_STM32L496VGT6P_Event_RxComplete ) == SPI_STM32L496VGT6P_Event_RxComplete )
         {
-            Instance->Context->Event &= ~SPI_STM32L496VGT6P_Event_RxComplete;
+            Context->Event &= ~SPI_STM32L496VGT6P_Event_RxComplete;
             SPI_Debug( "RX Complete: Instance=%p, SPIx=%d", Instance, Instance->SPIx );
             // TODO Invoke Callback
         }
 
-        if ( ( Instance->Context->Event & SPI_STM32L496VGT6P_Event_Abort ) == SPI_STM32L496VGT6P_Event_Abort )
+        if ( ( Event & SPI_STM32L496VGT6P_Event_Abort ) == SPI_STM32L496VGT6P_Event_Abort )
         {
-            Instance->Context->Event &= ~SPI_STM32L496VGT6P_Event_Abort;
+            Context->Event &= ~SPI_STM32L496VGT6P_Event_Abort;
             SPI_Debug( "Abort: Instance=%p, SPIx=%d", Instance, Instance->SPIx );
             // TODO Invoke Callback
         }
 
-        if ( ( Instance->Context->Event & SPI_STM32L496VGT6P_Event_Error ) == SPI_STM32L496VGT6P_Event_Error )
+        if ( ( Event & SPI_STM32L496VGT6P_Event_Error ) == SPI_STM32L496VGT6P_Event_Error )
         {
-            Instance->Context->Event &= ~SPI_STM32L496VGT6P_Event_Error;
+            Context->Event &= ~SPI_STM32L496VGT6P_Event_Error;
             SPI_Debug( "Error: Instance=%p, SPIx=%d", Instance, Instance->SPIx );
             // TODO Invoke Callback
         }
-
-        Status = SPI_STM32L496VGT6P_Status_Success;
     }
     while ( 0 );
     return Status;
@@ -898,7 +906,11 @@ static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationTransmitExecute( 
         SPI_STM32L496VGT6P_Operation_t * Operation = &Process->Context.Operation;
 
         HAL_StatusTypeDef HAL_Status = HAL_ERROR;
+    #if USE_DMA
         if ( ( HAL_Status = HAL_SPI_Transmit_DMA( &Instance->Context->SPIx, Operation->Context.DataTx, Operation->Context.DataTxLength ) ) != HAL_OK )
+    #else
+        if ( ( HAL_Status = HAL_SPI_Transmit_IT( &Instance->Context->SPIx, Operation->Context.DataTx, Operation->Context.DataTxLength ) ) != HAL_OK )
+    #endif
         {
             Status = SPI_STM32L496VGT6P_Status_Error;
             break;
@@ -972,7 +984,11 @@ static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationReceiveExecute( S
         SPI_STM32L496VGT6P_Operation_t * Operation = &Process->Context.Operation;
 
         HAL_StatusTypeDef HAL_Status = HAL_ERROR;
+    #if USE_DMA
         if ( ( HAL_Status = HAL_SPI_Receive_DMA( &Instance->Context->SPIx, Operation->Context.DataRx, Operation->Context.DataRxLength ) ) != HAL_OK )
+    #else
+        if ( ( HAL_Status = HAL_SPI_Receive_IT( &Instance->Context->SPIx, Operation->Context.DataRx, Operation->Context.DataRxLength ) ) != HAL_OK )
+    #endif
         {
             Status = SPI_STM32L496VGT6P_Status_Error;
             break;
@@ -1046,12 +1062,15 @@ static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationTransactionExecut
         SPI_STM32L496VGT6P_Operation_t * Operation = &Process->Context.Operation;
 
         HAL_StatusTypeDef HAL_Status = HAL_ERROR;
+    #if USE_DMA
         if ( ( HAL_Status = HAL_SPI_TransmitReceive_DMA( &Instance->Context->SPIx, Operation->Context.DataTx, Operation->Context.DataRx, UTIL_Max( Operation->Context.DataTxLength, Operation->Context.DataRxLength ) ) ) != HAL_OK )
+    #else
+        if ( ( HAL_Status = HAL_SPI_TransmitReceive_IT( &Instance->Context->SPIx, Operation->Context.DataTx, Operation->Context.DataRx, UTIL_Max( Operation->Context.DataTxLength, Operation->Context.DataRxLength ) ) ) != HAL_OK )
+    #endif
         {
             Status = SPI_STM32L496VGT6P_Status_Error;
             break;
         }
-
         Operation->Type = SPI_STM32L496VGT6P_OperationType_Transaction;
         Operation->Handler = SPI_STM32L496VGT6P_OperationTransactionResolve;
         Operation->Status = SPI_STM32L496VGT6P_Status_Success;
@@ -1344,7 +1363,7 @@ SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Transaction( SPI_STM32L496VGT6P_I
 // #### Public Variable(s) #####################################################
 // #############################################################################
 
-const char SPI_STM32L496VGT6P_VERSION[] = "0.0.0.v20260120-0211";
+const char SPI_STM32L496VGT6P_VERSION[] = "0.0.0.v20260124-1234";
 
 // #############################################################################
 // #### File Guard #############################################################
