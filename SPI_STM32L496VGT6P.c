@@ -1052,6 +1052,7 @@ static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationTransactionExecut
             Status = SPI_STM32L496VGT6P_Status_Error;
             break;
         }
+
         Operation->Type = SPI_STM32L496VGT6P_OperationType_Transaction;
         Operation->Handler = SPI_STM32L496VGT6P_OperationTransactionResolve;
         Operation->Status = SPI_STM32L496VGT6P_Status_Success;
@@ -1344,7 +1345,7 @@ SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Transaction( SPI_STM32L496VGT6P_I
 // #### Public Variable(s) #####################################################
 // #############################################################################
 
-const char SPI_STM32L496VGT6P_VERSION[] = "0.0.0.v20260125-0138";
+const char SPI_STM32L496VGT6P_VERSION[] = "0.0.0.v20260129-1438";
 
 // #############################################################################
 // #### File Guard #############################################################
