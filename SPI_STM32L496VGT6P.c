@@ -526,7 +526,7 @@ static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Instance_Cycle( SPI_STM32L
 
 static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Instance_DeInitialize( SPI_STM32L496VGT6P_Instance_t * Instance )
 {
-    SPI_STM32L496VGT6P_Status_t Status = SPI_STM32L496VGT6P_Status_Error;
+    SPI_STM32L496VGT6P_Status_t Status = SPI_STM32L496VGT6P_Status_Success;
 
     do
     {
@@ -1345,7 +1345,7 @@ SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Transaction( SPI_STM32L496VGT6P_I
 // #### Public Variable(s) #####################################################
 // #############################################################################
 
-const char SPI_STM32L496VGT6P_VERSION[] = "0.0.0.v20260129-1438";
+const char SPI_STM32L496VGT6P_VERSION[] = "0.0.0.v20260202-1914";
 
 // #############################################################################
 // #### File Guard #############################################################
