@@ -113,9 +113,9 @@ extern "C"
     /**
      *  @brief SPI STM32L496VGT6P Instance Context
      *
-     *  @struct SPI_STM32L496VGT6P_Instance_Context_t
+     *  @struct SPI_STM32L496VGT6P_InstanceContext_t
      */
-    typedef struct SPI_STM32L496VGT6P_Instance_Context SPI_STM32L496VGT6P_Instance_Context_t;
+    typedef struct SPI_STM32L496VGT6P_InstanceContext SPI_STM32L496VGT6P_InstanceContext_t;
 
     /**
      *  @brief SPI STM32L496VGT6P Instance
@@ -132,7 +132,7 @@ extern "C"
 
         SPI_STM32L496VGT6P_CallbackOnComplete_t OnComplete;
 
-        SPI_STM32L496VGT6P_Instance_Context_t * Context;
+        SPI_STM32L496VGT6P_InstanceContext_t * Context;
     } SPI_STM32L496VGT6P_Instance_t;
 
     /**
