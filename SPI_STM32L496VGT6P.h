@@ -101,41 +101,6 @@ extern "C"
     } SPI_STM32L496VGT6P_t;
 
     /**
-     *  @brief SPI STM32L496VGT6P Instance (Forward Declaration)
-     */
-    typedef struct SPI_STM32L496VGT6P_Instance SPI_STM32L496VGT6P_Instance_t;
-
-    /**
-     *  @brief SPI STM32L496VGT6P Callback On Complete
-     */
-    typedef void ( *SPI_STM32L496VGT6P_CallbackOnComplete_t )( SPI_STM32L496VGT6P_Instance_t * Instance, SPI_STM32L496VGT6P_Status_t Status );
-
-    /**
-     *  @brief SPI STM32L496VGT6P Instance Context
-     *
-     *  @struct SPI_STM32L496VGT6P_InstanceContext_t
-     */
-    typedef struct SPI_STM32L496VGT6P_InstanceContext SPI_STM32L496VGT6P_InstanceContext_t;
-
-    /**
-     *  @brief SPI STM32L496VGT6P Instance
-     *
-     *  @struct SPI_STM32L496VGT6P_Instance_t
-     */
-    typedef struct SPI_STM32L496VGT6P_Instance
-    {
-        SPI_STM32L496VGT6P_t SPIx;
-
-        GPIO_t SCK;
-        GPIO_t MOSI;
-        GPIO_t MISO;
-
-        SPI_STM32L496VGT6P_CallbackOnComplete_t OnComplete;
-
-        SPI_STM32L496VGT6P_InstanceContext_t * Context;
-    } SPI_STM32L496VGT6P_Instance_t;
-
-    /**
      *  @brief SPI STM32L496VGT6P Data
      */
     typedef uint8_t SPI_STM32L496VGT6P_Data_t;
@@ -145,6 +110,43 @@ extern "C"
      */
     typedef uint32_t SPI_STM32L496VGT6P_DataLength_t;
 
+    /**
+     *  @brief SPI STM32L496VGT6P Callback Context
+     */
+    typedef void SPI_STM32L496VGT6P_CallbackContext_t;
+
+    /**
+     *  @brief SPI STM32L496VGT6P Callback
+     */
+    typedef SPI_STM32L496VGT6P_Status_t( SPI_STM32L496VGT6P_Callback_t )( SPI_STM32L496VGT6P_t SPIx, SPI_STM32L496VGT6P_CallbackContext_t * Context );
+
+    /**
+     *  @brief SPI STM32L496VGT6P On Interrupt Configuration
+     *
+     *  @struct SPI_OnInterrupt_t
+     */
+    typedef struct SPI_STM32L496VGT6P_OnInterrupt
+    {
+        SPI_STM32L496VGT6P_Callback_t * Callback;
+        SPI_STM32L496VGT6P_CallbackContext_t * Context;
+    } SPI_STM32L496VGT6P_OnInterrupt_t;
+
+    /**
+     *  @brief SPI STM32L496VGT6P Callback
+     */
+    typedef SPI_STM32L496VGT6P_Status_t( SPI_STM32L496VGT6P_CallbackOnComplete_t )( SPI_STM32L496VGT6P_t SPIx, SPI_STM32L496VGT6P_Status_t Status, SPI_STM32L496VGT6P_CallbackContext_t * Context );
+
+    /**
+     *  @brief SPI STM32L496VGT6P On Interrupt Configuration
+     *
+     *  @struct SPI_OnInterrupt_t
+     */
+    typedef struct SPI_STM32L496VGT6P_OnComplete
+    {
+        SPI_STM32L496VGT6P_CallbackOnComplete_t * Callback;
+        SPI_STM32L496VGT6P_CallbackContext_t * Context;
+    } SPI_STM32L496VGT6P_OnComplete_t;
+
     // #############################################################################
     // #### Public Method(s) #######################################################
     // #############################################################################
@@ -152,56 +154,66 @@ extern "C"
     /**
      *  @brief Initializes specified SPI STM32L496VGT6P Instance
      *
-     *  @param[in] Instance Instance
+     *  @param[in] SPIx Instance
      *
      *  @return SPI_STM32L496VGT6P_Status_t
      */
-    SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Initialize( SPI_STM32L496VGT6P_Instance_t * Instance );
+    SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Initialize( SPI_STM32L496VGT6P_t SPIx );
 
     /**
      *  @brief Cycles specified SPI STM32L496VGT6P Instance
      *
-     *  @param[in] Instance Instance
+     *  @param[in] SPIx Instance
      *
      *  @return SPI_STM32L496VGT6P_Status_t
      */
-    SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Cycle( SPI_STM32L496VGT6P_Instance_t * Instance );
+    SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Cycle( SPI_STM32L496VGT6P_t SPIx );
 
     /**
      *  @brief De-initializes specified SPI STM32L496VGT6P Instance
      *
-     *  @param[in] Instance Instance
+     *  @param[in] SPIx Instance
      *
      *  @return SPI_STM32L496VGT6P_Status_t
      */
-    SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_DeInitialize( SPI_STM32L496VGT6P_Instance_t * Instance );
+    SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_DeInitialize( SPI_STM32L496VGT6P_t SPIx );
+
+    /**
+     *  @brief Set callback for on-complete of specified SPI STM32L496VGT6P Instance
+     *
+     *  @param[in] SPIx       Instance
+     *  @param[in] OnComplete On-complete configuration
+     *
+     *  @return SPI_Status_t
+     */
+    SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_SetOnComplete( SPI_STM32L496VGT6P_t SPIx, SPI_STM32L496VGT6P_OnComplete_t OnComplete );
 
     /**
      *  @brief Writes data to specified SPI STM32L496VGT6P Instance
      *
-     *  @param[in] Instance   Instance
+     *  @param[in] SPIx       Instance
      *  @param[in] Data       Data buffer
      *  @param[in] DataLength Length of data buffer
      *
      *  @return SPI_STM32L496VGT6P_Status_t
      */
-    SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Write( SPI_STM32L496VGT6P_Instance_t * Instance, SPI_STM32L496VGT6P_Data_t * Data, SPI_STM32L496VGT6P_DataLength_t DataLength );
+    SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Write( SPI_STM32L496VGT6P_t SPIx, SPI_STM32L496VGT6P_Data_t * Data, SPI_STM32L496VGT6P_DataLength_t DataLength );
 
     /**
      *  @brief Reads data from specified SPI STM32L496VGT6P Instance
      *
-     *  @param[in] Instance   Instance
+     *  @param[in] SPIx       Instance
      *  @param[in] Data       Data buffer
      *  @param[in] DataLength Length of data buffer
      *
      *  @return SPI_STM32L496VGT6P_Status_t
      */
-    SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Read( SPI_STM32L496VGT6P_Instance_t * Instance, SPI_STM32L496VGT6P_Data_t * Data, SPI_STM32L496VGT6P_DataLength_t DataLength );
+    SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Read( SPI_STM32L496VGT6P_t SPIx, SPI_STM32L496VGT6P_Data_t * Data, SPI_STM32L496VGT6P_DataLength_t DataLength );
 
     /**
      *  @brief Initializes specified SPI STM32L496VGT6P Instance
      *
-     *  @param[in] Instance     Instance
+     *  @param[in] SPIx         Instance
      *  @param[in] DataTx       Transmit data buffer
      *  @param[in] DataTxLength Length of transmit data buffer
      *  @param[in] DataRx       Receive data buffer
@@ -209,7 +221,7 @@ extern "C"
      *
      *  @return SPI_STM32L496VGT6P_Status_t
      */
-    SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Transaction( SPI_STM32L496VGT6P_Instance_t * Instance, SPI_STM32L496VGT6P_Data_t * DataTx, SPI_STM32L496VGT6P_DataLength_t DataTxLength, SPI_STM32L496VGT6P_Data_t * DataRx, SPI_STM32L496VGT6P_DataLength_t DataRxLength );
+    SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Transaction( SPI_STM32L496VGT6P_t SPIx, SPI_STM32L496VGT6P_Data_t * DataTx, SPI_STM32L496VGT6P_DataLength_t DataTxLength, SPI_STM32L496VGT6P_Data_t * DataRx, SPI_STM32L496VGT6P_DataLength_t DataRxLength );
 
     // #############################################################################
     // #### Public Variable(s) #####################################################

@@ -60,6 +60,10 @@
 // #### Private Macro(s) #######################################################
 // #############################################################################
 
+// FIXME Captured events should be cleared just after capturing it
+//       But as for some operations depend on it it must be maintained
+    #define SPI_EVENT_CLEAR_WORKAROUND 1
+
 // #############################################################################
 // #### Private Type(s) ########################################################
 // #############################################################################
@@ -82,10 +86,10 @@ typedef enum SPI_STM32L496VGT6P_OperationType
 /**
  * @brief SPI STM32L496VGT6P Operation Handler
  */
-typedef SPI_STM32L496VGT6P_Status_t ( *SPI_STM32L496VGT6P_OperationHandler_t )( SPI_STM32L496VGT6P_Instance_t * Instance );
+typedef SPI_STM32L496VGT6P_Status_t ( *SPI_STM32L496VGT6P_OperationHandler_t )( SPI_STM32L496VGT6P_t SPIx );
 
 /**
- * @brief SPI STM32L496VGT6P Operation Context
+ * @brief SPI STM32L496VGT6P Operation Instance
  *
  * @struct SPI_STM32L496VGT6P_OperationContext_t
  */
@@ -129,10 +133,10 @@ typedef enum SPI_STM32L496VGT6P_ProcessType
 /**
  * @brief SPI STM32L496VGT6P Process Handler
  */
-typedef SPI_STM32L496VGT6P_Status_t ( *SPI_STM32L496VGT6P_ProcessHandler_t )( SPI_STM32L496VGT6P_Instance_t * Instance );
+typedef SPI_STM32L496VGT6P_Status_t ( *SPI_STM32L496VGT6P_ProcessHandler_t )( SPI_STM32L496VGT6P_t SPIx );
 
 /**
- * @brief SPI STM32L496VGT6P Process Context
+ * @brief SPI STM32L496VGT6P Process Instance
  *
  * @struct SPI_STM32L496VGT6P_ProcessContext_t
  */
@@ -168,19 +172,22 @@ typedef enum SPI_STM32L496VGT6P_Event
     SPI_STM32L496VGT6P_Event_Error = UTIL_BIT( 4 ),
 } SPI_STM32L496VGT6P_Event_t;
 
-typedef struct SPI_STM32L496VGT6P_InstanceContext
+typedef struct SPI_STM32L496VGT6P_Instance
 {
     SPI_HandleTypeDef SPIx;
 
     SPI_STM32L496VGT6P_Event_t Event;
 
     SPI_STM32L496VGT6P_Process_t Process;
-} SPI_STM32L496VGT6P_InstanceContext_t;
+
+    SPI_STM32L496VGT6P_OnInterrupt_t OnInterrupt;
+    SPI_STM32L496VGT6P_OnComplete_t OnComplete;
+} SPI_STM32L496VGT6P_Instance_t;
 
 typedef struct SPI_STM32L496VGT6P_Context
 {
     TIM_Timestamp_t Timestamp;
-    SPI_STM32L496VGT6P_InstanceContext_t Context[ SPI_STM32L496VGT6P_Count ];
+    SPI_STM32L496VGT6P_Instance_t Instance[ SPI_STM32L496VGT6P_Count ];
 } SPI_STM32L496VGT6P_Context_t;
 
 // #############################################################################
@@ -204,28 +211,24 @@ static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Context_Initialize( void )
 static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Context_Cycle( void );
 static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Context_DeInitialize( void );
 
-static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Instance_Initialize( SPI_STM32L496VGT6P_Instance_t * Instance );
-static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Instance_Cycle( SPI_STM32L496VGT6P_Instance_t * Instance );
-static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Instance_DeInitialize( SPI_STM32L496VGT6P_Instance_t * Instance );
+static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_SetProcess( SPI_STM32L496VGT6P_t SPIx, SPI_STM32L496VGT6P_ProcessType_t ProcessType );
 
-static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_SetProcess( SPI_STM32L496VGT6P_Instance_t * Instance, SPI_STM32L496VGT6P_ProcessType_t ProcessType );
+static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_ProcessInitialize( SPI_STM32L496VGT6P_t SPIx );
+static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_ProcessTransmit( SPI_STM32L496VGT6P_t SPIx );
+static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_ProcessReceive( SPI_STM32L496VGT6P_t SPIx );
+static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_ProcessTransaction( SPI_STM32L496VGT6P_t SPIx );
 
-static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_ProcessInitialize( SPI_STM32L496VGT6P_Instance_t * Instance );
-static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_ProcessTransmit( SPI_STM32L496VGT6P_Instance_t * Instance );
-static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_ProcessReceive( SPI_STM32L496VGT6P_Instance_t * Instance );
-static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_ProcessTransaction( SPI_STM32L496VGT6P_Instance_t * Instance );
+static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationCommitExecute( SPI_STM32L496VGT6P_t SPIx );
+static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationCommitResolve( SPI_STM32L496VGT6P_t SPIx );
 
-static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationCommitExecute( SPI_STM32L496VGT6P_Instance_t * Instance );
-static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationCommitResolve( SPI_STM32L496VGT6P_Instance_t * Instance );
+static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationTransmitExecute( SPI_STM32L496VGT6P_t SPIx );
+static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationTransmitResolve( SPI_STM32L496VGT6P_t SPIx );
 
-static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationTransmitExecute( SPI_STM32L496VGT6P_Instance_t * Instance );
-static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationTransmitResolve( SPI_STM32L496VGT6P_Instance_t * Instance );
+static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationReceiveExecute( SPI_STM32L496VGT6P_t SPIx );
+static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationReceiveResolve( SPI_STM32L496VGT6P_t SPIx );
 
-static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationReceiveExecute( SPI_STM32L496VGT6P_Instance_t * Instance );
-static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationReceiveResolve( SPI_STM32L496VGT6P_Instance_t * Instance );
-
-static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationTransactionExecute( SPI_STM32L496VGT6P_Instance_t * Instance );
-static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationTransactionResolve( SPI_STM32L496VGT6P_Instance_t * Instance );
+static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationTransactionExecute( SPI_STM32L496VGT6P_t SPIx );
+static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationTransactionResolve( SPI_STM32L496VGT6P_t SPIx );
 
 // #############################################################################
 // #### Private Variable(s) ####################################################
@@ -239,40 +242,40 @@ static SPI_STM32L496VGT6P_Context_t SPI_STM32L496VGT6P_Context;
 
 void SPI1_IRQHandler( void )
 {
-    SPI_STM32L496VGT6P_InstanceContext_t * Context = &SPI_STM32L496VGT6P_Context.Context[ SPI_STM32L496VGT6P_1 ];
+    SPI_STM32L496VGT6P_Instance_t * Instance = &SPI_STM32L496VGT6P_Context.Instance[ SPI_STM32L496VGT6P_1 ];
 
-    Context->Event |= SPI_STM32L496VGT6P_Event_Interrupt;
+    Instance->Event |= SPI_STM32L496VGT6P_Event_Interrupt;
 
-    HAL_SPI_IRQHandler( &Context->SPIx );
+    HAL_SPI_IRQHandler( &Instance->SPIx );
 }
 
 void SPI2_IRQHandler( void )
 {
-    SPI_STM32L496VGT6P_InstanceContext_t * Context = &SPI_STM32L496VGT6P_Context.Context[ SPI_STM32L496VGT6P_2 ];
+    SPI_STM32L496VGT6P_Instance_t * Instance = &SPI_STM32L496VGT6P_Context.Instance[ SPI_STM32L496VGT6P_2 ];
 
-    Context->Event |= SPI_STM32L496VGT6P_Event_Interrupt;
+    Instance->Event |= SPI_STM32L496VGT6P_Event_Interrupt;
 
-    HAL_SPI_IRQHandler( &Context->SPIx );
+    HAL_SPI_IRQHandler( &Instance->SPIx );
 }
 
 void SPI3_IRQHandler( void )
 {
-    SPI_STM32L496VGT6P_InstanceContext_t * Context = &SPI_STM32L496VGT6P_Context.Context[ SPI_STM32L496VGT6P_3 ];
+    SPI_STM32L496VGT6P_Instance_t * Instance = &SPI_STM32L496VGT6P_Context.Instance[ SPI_STM32L496VGT6P_3 ];
 
-    Context->Event |= SPI_STM32L496VGT6P_Event_Interrupt;
+    Instance->Event |= SPI_STM32L496VGT6P_Event_Interrupt;
 
-    HAL_SPI_IRQHandler( &Context->SPIx );
+    HAL_SPI_IRQHandler( &Instance->SPIx );
 }
 
 void HAL_SPI_TxCpltCallback( SPI_HandleTypeDef * hspi )
 {
     for ( SPI_STM32L496VGT6P_t SPI_x = SPI_STM32L496VGT6P_1; SPI_x < SPI_STM32L496VGT6P_Count; ++SPI_x )
     {
-        SPI_STM32L496VGT6P_InstanceContext_t * Context = &SPI_STM32L496VGT6P_Context.Context[ SPI_x ];
+        SPI_STM32L496VGT6P_Instance_t * Instance = &SPI_STM32L496VGT6P_Context.Instance[ SPI_x ];
 
-        if ( &Context->SPIx == hspi )
+        if ( &Instance->SPIx == hspi )
         {
-            Context->Event |= SPI_STM32L496VGT6P_Event_TxComplete;
+            Instance->Event |= SPI_STM32L496VGT6P_Event_TxComplete;
             break;
         }
     }
@@ -282,11 +285,11 @@ void HAL_SPI_RxCpltCallback( SPI_HandleTypeDef * hspi )
 {
     for ( SPI_STM32L496VGT6P_t SPI_x = SPI_STM32L496VGT6P_1; SPI_x < SPI_STM32L496VGT6P_Count; ++SPI_x )
     {
-        SPI_STM32L496VGT6P_InstanceContext_t * Context = &SPI_STM32L496VGT6P_Context.Context[ SPI_x ];
+        SPI_STM32L496VGT6P_Instance_t * Instance = &SPI_STM32L496VGT6P_Context.Instance[ SPI_x ];
 
-        if ( &Context->SPIx == hspi )
+        if ( &Instance->SPIx == hspi )
         {
-            Context->Event |= SPI_STM32L496VGT6P_Event_RxComplete;
+            Instance->Event |= SPI_STM32L496VGT6P_Event_RxComplete;
             break;
         }
     }
@@ -296,11 +299,11 @@ void HAL_SPI_TxRxCpltCallback( SPI_HandleTypeDef * hspi )
 {
     for ( SPI_STM32L496VGT6P_t SPI_x = SPI_STM32L496VGT6P_1; SPI_x < SPI_STM32L496VGT6P_Count; ++SPI_x )
     {
-        SPI_STM32L496VGT6P_InstanceContext_t * Context = &SPI_STM32L496VGT6P_Context.Context[ SPI_x ];
+        SPI_STM32L496VGT6P_Instance_t * Instance = &SPI_STM32L496VGT6P_Context.Instance[ SPI_x ];
 
-        if ( &Context->SPIx == hspi )
+        if ( &Instance->SPIx == hspi )
         {
-            Context->Event |= SPI_STM32L496VGT6P_Event_TxComplete | SPI_STM32L496VGT6P_Event_RxComplete;
+            Instance->Event |= SPI_STM32L496VGT6P_Event_TxComplete | SPI_STM32L496VGT6P_Event_RxComplete;
             break;
         }
     }
@@ -322,11 +325,11 @@ void HAL_SPI_ErrorCallback( SPI_HandleTypeDef * hspi )
 {
     for ( SPI_STM32L496VGT6P_t SPI_x = SPI_STM32L496VGT6P_1; SPI_x < SPI_STM32L496VGT6P_Count; ++SPI_x )
     {
-        SPI_STM32L496VGT6P_InstanceContext_t * Context = &SPI_STM32L496VGT6P_Context.Context[ SPI_x ];
+        SPI_STM32L496VGT6P_Instance_t * Instance = &SPI_STM32L496VGT6P_Context.Instance[ SPI_x ];
 
-        if ( &Context->SPIx == hspi )
+        if ( &Instance->SPIx == hspi )
         {
-            Context->Event |= SPI_STM32L496VGT6P_Event_Error;
+            Instance->Event |= SPI_STM32L496VGT6P_Event_Error;
             break;
         }
     }
@@ -336,11 +339,11 @@ void HAL_SPI_AbortCpltCallback( SPI_HandleTypeDef * hspi )
 {
     for ( SPI_STM32L496VGT6P_t SPI_x = SPI_STM32L496VGT6P_1; SPI_x < SPI_STM32L496VGT6P_Count; ++SPI_x )
     {
-        SPI_STM32L496VGT6P_InstanceContext_t * Context = &SPI_STM32L496VGT6P_Context.Context[ SPI_x ];
+        SPI_STM32L496VGT6P_Instance_t * Instance = &SPI_STM32L496VGT6P_Context.Instance[ SPI_x ];
 
-        if ( &Context->SPIx == hspi )
+        if ( &Instance->SPIx == hspi )
         {
-            Context->Event |= SPI_STM32L496VGT6P_Event_Abort;
+            Instance->Event |= SPI_STM32L496VGT6P_Event_Abort;
             break;
         }
     }
@@ -361,26 +364,26 @@ static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Context_Initialize( void )
         extern DMA_HandleTypeDef hdma_spi1_tx;
         extern void MX_SPI1_Init( void );
         MX_SPI1_Init( );
-        SPI_STM32L496VGT6P_Context.Context[ SPI_STM32L496VGT6P_1 ].SPIx = hspi1;
-        __HAL_LINKDMA( &SPI_STM32L496VGT6P_Context.Context[ SPI_STM32L496VGT6P_1 ].SPIx, hdmatx, hdma_spi1_tx );
+        SPI_STM32L496VGT6P_Context.Instance[ SPI_STM32L496VGT6P_1 ].SPIx = hspi1;
+        __HAL_LINKDMA( &SPI_STM32L496VGT6P_Context.Instance[ SPI_STM32L496VGT6P_1 ].SPIx, hdmatx, hdma_spi1_tx );
 
         extern SPI_HandleTypeDef hspi2;
         extern DMA_HandleTypeDef hdma_spi2_tx;
         extern DMA_HandleTypeDef hdma_spi2_rx;
         extern void MX_SPI2_Init( void );
         MX_SPI2_Init( );
-        SPI_STM32L496VGT6P_Context.Context[ SPI_STM32L496VGT6P_2 ].SPIx = hspi2;
-        __HAL_LINKDMA( &SPI_STM32L496VGT6P_Context.Context[ SPI_STM32L496VGT6P_2 ].SPIx, hdmatx, hdma_spi2_tx );
-        __HAL_LINKDMA( &SPI_STM32L496VGT6P_Context.Context[ SPI_STM32L496VGT6P_2 ].SPIx, hdmarx, hdma_spi2_rx );
+        SPI_STM32L496VGT6P_Context.Instance[ SPI_STM32L496VGT6P_2 ].SPIx = hspi2;
+        __HAL_LINKDMA( &SPI_STM32L496VGT6P_Context.Instance[ SPI_STM32L496VGT6P_2 ].SPIx, hdmatx, hdma_spi2_tx );
+        __HAL_LINKDMA( &SPI_STM32L496VGT6P_Context.Instance[ SPI_STM32L496VGT6P_2 ].SPIx, hdmarx, hdma_spi2_rx );
 
         extern SPI_HandleTypeDef hspi3;
         extern DMA_HandleTypeDef hdma_spi3_tx;
         extern DMA_HandleTypeDef hdma_spi3_rx;
         extern void MX_SPI3_Init( void );
         MX_SPI3_Init( );
-        SPI_STM32L496VGT6P_Context.Context[ SPI_STM32L496VGT6P_3 ].SPIx = hspi3;
-        __HAL_LINKDMA( &SPI_STM32L496VGT6P_Context.Context[ SPI_STM32L496VGT6P_3 ].SPIx, hdmatx, hdma_spi3_tx );
-        __HAL_LINKDMA( &SPI_STM32L496VGT6P_Context.Context[ SPI_STM32L496VGT6P_3 ].SPIx, hdmarx, hdma_spi3_rx );
+        SPI_STM32L496VGT6P_Context.Instance[ SPI_STM32L496VGT6P_3 ].SPIx = hspi3;
+        __HAL_LINKDMA( &SPI_STM32L496VGT6P_Context.Instance[ SPI_STM32L496VGT6P_3 ].SPIx, hdmatx, hdma_spi3_tx );
+        __HAL_LINKDMA( &SPI_STM32L496VGT6P_Context.Instance[ SPI_STM32L496VGT6P_3 ].SPIx, hdmarx, hdma_spi3_rx );
     #endif
     }
     while ( 0 );
@@ -421,140 +424,16 @@ static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Context_DeInitialize( void
     return Status;
 }
 
-static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Instance_Initialize( SPI_STM32L496VGT6P_Instance_t * Instance )
+static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_SetProcess( SPI_STM32L496VGT6P_t SPIx, SPI_STM32L496VGT6P_ProcessType_t ProcessType )
 {
     SPI_STM32L496VGT6P_Status_t Status = SPI_STM32L496VGT6P_Status_Success;
 
     do
     {
-        SPI_Trace( "%s( Instance=%p )", __FUNCTION__, Instance );
+        SPI_Trace( "%s( SPIx=%d, ProcessType=%d )", __FUNCTION__, SPIx, ProcessType );
 
-        if ( Instance == NULL )
-        {
-            Status = SPI_STM32L496VGT6P_Status_ArgumentInvalid;
-            break;
-        }
-
-        SPI_STM32L496VGT6P_InstanceContext_t * Context = &SPI_STM32L496VGT6P_Context.Context[ Instance->SPIx ];
-
-        // TODO GPIOs Configurations
-
-        Context->Event = SPI_STM32L496VGT6P_Event_None;
-
-        Instance->Context = Context;
-
-        Status = SPI_STM32L496VGT6P_SetProcess( Instance, SPI_STM32L496VGT6P_ProcessType_Initialize );
-    }
-    while ( 0 );
-
-    return Status;
-}
-
-static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Instance_Cycle( SPI_STM32L496VGT6P_Instance_t * Instance )
-{
-    SPI_STM32L496VGT6P_Status_t Status = SPI_STM32L496VGT6P_Status_Success;
-
-    do
-    {
-        SPI_Trace( "%s( Instance=%p )", __FUNCTION__, Instance );
-
-        SPI_STM32L496VGT6P_InstanceContext_t * Context = &SPI_STM32L496VGT6P_Context.Context[ Instance->SPIx ];
-        SPI_STM32L496VGT6P_Process_t * Process = &Context->Process;
-        SPI_STM32L496VGT6P_Operation_t * Operation = &Process->Context.Operation;
-        SPI_STM32L496VGT6P_Event_t Event = Context->Event; // CAUTION: Has to copy events occurred at the early start of the cycle, so as to be cleared at the end of the cycle,
-                                                           //          which let events occurs after that for the next cycle call
-
-        if ( Operation->Handler != NULL )
-        {
-            SPI_STM32L496VGT6P_Status_t STM32L496VGT6P_Status = SPI_STM32L496VGT6P_Status_Error;
-            if ( ( STM32L496VGT6P_Status = Operation->Handler( Instance ) ) != SPI_STM32L496VGT6P_Status_Success )
-            {
-                Status = STM32L496VGT6P_Status;
-                // FIXME Operation reported non success status, is there any action ?
-            }
-        }
-
-        if ( Process->Handler != NULL )
-        {
-            SPI_STM32L496VGT6P_Status_t STM32L496VGT6P_Status = SPI_STM32L496VGT6P_Status_Error;
-            if ( ( STM32L496VGT6P_Status = Process->Handler( Instance ) ) != SPI_STM32L496VGT6P_Status_Success )
-            {
-                Status = STM32L496VGT6P_Status;
-                // FIXME Process reported non success status, is there any action ?
-            }
-        }
-
-        if ( ( Event & SPI_STM32L496VGT6P_Event_Interrupt ) == SPI_STM32L496VGT6P_Event_Interrupt )
-        {
-            Context->Event &= ~SPI_STM32L496VGT6P_Event_Interrupt;
-            SPI_Trace( "Interrupt: Instance=%p, SPIx=%d", Instance, Instance->SPIx );
-            // TODO Invoke Callback
-        }
-
-        if ( ( Event & SPI_STM32L496VGT6P_Event_TxComplete ) == SPI_STM32L496VGT6P_Event_TxComplete )
-        {
-            Context->Event &= ~SPI_STM32L496VGT6P_Event_TxComplete;
-            SPI_Debug( "TX Complete: Instance=%p, SPIx=%d", Instance, Instance->SPIx );
-            // TODO Invoke Callback
-        }
-
-        if ( ( Event & SPI_STM32L496VGT6P_Event_RxComplete ) == SPI_STM32L496VGT6P_Event_RxComplete )
-        {
-            Context->Event &= ~SPI_STM32L496VGT6P_Event_RxComplete;
-            SPI_Debug( "RX Complete: Instance=%p, SPIx=%d", Instance, Instance->SPIx );
-            // TODO Invoke Callback
-        }
-
-        if ( ( Event & SPI_STM32L496VGT6P_Event_Abort ) == SPI_STM32L496VGT6P_Event_Abort )
-        {
-            Context->Event &= ~SPI_STM32L496VGT6P_Event_Abort;
-            SPI_Debug( "Abort: Instance=%p, SPIx=%d", Instance, Instance->SPIx );
-            // TODO Invoke Callback
-        }
-
-        if ( ( Event & SPI_STM32L496VGT6P_Event_Error ) == SPI_STM32L496VGT6P_Event_Error )
-        {
-            Context->Event &= ~SPI_STM32L496VGT6P_Event_Error;
-            SPI_Debug( "Error: Instance=%p, SPIx=%d", Instance, Instance->SPIx );
-            // TODO Invoke Callback
-        }
-    }
-    while ( 0 );
-
-    return Status;
-}
-
-static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Instance_DeInitialize( SPI_STM32L496VGT6P_Instance_t * Instance )
-{
-    SPI_STM32L496VGT6P_Status_t Status = SPI_STM32L496VGT6P_Status_Success;
-
-    do
-    {
-        SPI_Trace( "%s( Instance=%p )", __FUNCTION__, Instance );
-
-        if ( Instance == NULL )
-        {
-            Status = SPI_STM32L496VGT6P_Status_ArgumentInvalid;
-            break;
-        }
-
-        // TODO De-Initialize & Disable SPI
-    }
-    while ( 0 );
-
-    return Status;
-}
-
-static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_SetProcess( SPI_STM32L496VGT6P_Instance_t * Instance, SPI_STM32L496VGT6P_ProcessType_t ProcessType )
-{
-    SPI_STM32L496VGT6P_Status_t Status = SPI_STM32L496VGT6P_Status_Success;
-
-    do
-    {
-        SPI_Trace( "%s( Instance=%p, ProcessType=%d )", __FUNCTION__, Instance, ProcessType );
-
-        SPI_STM32L496VGT6P_InstanceContext_t * Context = &SPI_STM32L496VGT6P_Context.Context[ Instance->SPIx ];
-        SPI_STM32L496VGT6P_Process_t * Process = &Context->Process;
+        SPI_STM32L496VGT6P_Instance_t * Instance = &SPI_STM32L496VGT6P_Context.Instance[ SPIx ];
+        SPI_STM32L496VGT6P_Process_t * Process = &Instance->Process;
         SPI_STM32L496VGT6P_Operation_t * Operation = &Process->Context.Operation;
 
         switch ( ProcessType )
@@ -611,16 +490,16 @@ static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_SetProcess( SPI_STM32L496V
     return Status;
 }
 
-static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_ProcessInitialize( SPI_STM32L496VGT6P_Instance_t * Instance )
+static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_ProcessInitialize( SPI_STM32L496VGT6P_t SPIx )
 {
     SPI_STM32L496VGT6P_Status_t Status = SPI_STM32L496VGT6P_Status_Success;
 
     do
     {
-        SPI_Trace( "%s( Instance=%p )", __FUNCTION__, Instance );
+        SPI_Trace( "%s( SPIx=%d )", __FUNCTION__, SPIx );
 
-        SPI_STM32L496VGT6P_InstanceContext_t * Context = &SPI_STM32L496VGT6P_Context.Context[ Instance->SPIx ];
-        SPI_STM32L496VGT6P_Process_t * Process = &Context->Process;
+        SPI_STM32L496VGT6P_Instance_t * Instance = &SPI_STM32L496VGT6P_Context.Instance[ SPIx ];
+        SPI_STM32L496VGT6P_Process_t * Process = &Instance->Process;
         SPI_STM32L496VGT6P_Operation_t * Operation = &Process->Context.Operation;
 
         if ( Process->Type != SPI_STM32L496VGT6P_ProcessType_Initialize )
@@ -644,16 +523,16 @@ static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_ProcessInitialize( SPI_STM
         switch ( Operation->Type )
         {
             case SPI_STM32L496VGT6P_OperationType_Pending:
-                Operation->Status = SPI_STM32L496VGT6P_OperationCommitExecute( Instance );
+                Operation->Status = SPI_STM32L496VGT6P_OperationCommitExecute( SPIx );
                 break;
 
             case SPI_STM32L496VGT6P_OperationType_Commit:
             default:
-                if ( Instance->OnComplete != NULL )
+                if ( Instance->OnComplete.Callback != NULL )
                 {
-                    Instance->OnComplete( Instance, Operation->Status );
+                    Instance->OnComplete.Callback( SPIx, Operation->Status, Instance->OnComplete.Context );
                 }
-                Status = SPI_STM32L496VGT6P_SetProcess( Instance, SPI_STM32L496VGT6P_ProcessType_None );
+                Status = SPI_STM32L496VGT6P_SetProcess( SPIx, SPI_STM32L496VGT6P_ProcessType_None );
                 break;
         }
     }
@@ -662,16 +541,16 @@ static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_ProcessInitialize( SPI_STM
     return Status;
 }
 
-static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_ProcessTransmit( SPI_STM32L496VGT6P_Instance_t * Instance )
+static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_ProcessTransmit( SPI_STM32L496VGT6P_t SPIx )
 {
     SPI_STM32L496VGT6P_Status_t Status = SPI_STM32L496VGT6P_Status_Success;
 
     do
     {
-        SPI_Trace( "%s( Instance=%p )", __FUNCTION__, Instance );
+        SPI_Trace( "%s( SPIx=%d )", __FUNCTION__, SPIx );
 
-        SPI_STM32L496VGT6P_InstanceContext_t * Context = &SPI_STM32L496VGT6P_Context.Context[ Instance->SPIx ];
-        SPI_STM32L496VGT6P_Process_t * Process = &Context->Process;
+        SPI_STM32L496VGT6P_Instance_t * Instance = &SPI_STM32L496VGT6P_Context.Instance[ SPIx ];
+        SPI_STM32L496VGT6P_Process_t * Process = &Instance->Process;
         SPI_STM32L496VGT6P_Operation_t * Operation = &Process->Context.Operation;
 
         if ( Process->Type != SPI_STM32L496VGT6P_ProcessType_Transmit )
@@ -695,16 +574,16 @@ static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_ProcessTransmit( SPI_STM32
         switch ( Operation->Type )
         {
             case SPI_STM32L496VGT6P_OperationType_Pending:
-                Operation->Status = SPI_STM32L496VGT6P_OperationTransmitExecute( Instance );
+                Operation->Status = SPI_STM32L496VGT6P_OperationTransmitExecute( SPIx );
                 break;
 
             case SPI_STM32L496VGT6P_OperationType_Transmit:
             default:
-                if ( Instance->OnComplete != NULL )
+                if ( Instance->OnComplete.Callback != NULL )
                 {
-                    Instance->OnComplete( Instance, Operation->Status );
+                    Instance->OnComplete.Callback( SPIx, Operation->Status, Instance->OnComplete.Context );
                 }
-                Status = SPI_STM32L496VGT6P_SetProcess( Instance, SPI_STM32L496VGT6P_ProcessType_None );
+                Status = SPI_STM32L496VGT6P_SetProcess( SPIx, SPI_STM32L496VGT6P_ProcessType_None );
                 break;
         }
     }
@@ -713,16 +592,16 @@ static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_ProcessTransmit( SPI_STM32
     return Status;
 }
 
-static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_ProcessReceive( SPI_STM32L496VGT6P_Instance_t * Instance )
+static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_ProcessReceive( SPI_STM32L496VGT6P_t SPIx )
 {
     SPI_STM32L496VGT6P_Status_t Status = SPI_STM32L496VGT6P_Status_Success;
 
     do
     {
-        SPI_Trace( "%s( Instance=%p )", __FUNCTION__, Instance );
+        SPI_Trace( "%s( SPIx=%d )", __FUNCTION__, SPIx );
 
-        SPI_STM32L496VGT6P_InstanceContext_t * Context = &SPI_STM32L496VGT6P_Context.Context[ Instance->SPIx ];
-        SPI_STM32L496VGT6P_Process_t * Process = &Context->Process;
+        SPI_STM32L496VGT6P_Instance_t * Instance = &SPI_STM32L496VGT6P_Context.Instance[ SPIx ];
+        SPI_STM32L496VGT6P_Process_t * Process = &Instance->Process;
         SPI_STM32L496VGT6P_Operation_t * Operation = &Process->Context.Operation;
 
         if ( Process->Type != SPI_STM32L496VGT6P_ProcessType_Receive )
@@ -746,16 +625,16 @@ static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_ProcessReceive( SPI_STM32L
         switch ( Operation->Type )
         {
             case SPI_STM32L496VGT6P_OperationType_Pending:
-                Operation->Status = SPI_STM32L496VGT6P_OperationReceiveExecute( Instance );
+                Operation->Status = SPI_STM32L496VGT6P_OperationReceiveExecute( SPIx );
                 break;
 
             case SPI_STM32L496VGT6P_OperationType_Receive:
             default:
-                if ( Instance->OnComplete != NULL )
+                if ( Instance->OnComplete.Callback != NULL )
                 {
-                    Instance->OnComplete( Instance, Operation->Status );
+                    Instance->OnComplete.Callback( SPIx, Operation->Status, Instance->OnComplete.Context );
                 }
-                Status = SPI_STM32L496VGT6P_SetProcess( Instance, SPI_STM32L496VGT6P_ProcessType_None );
+                Status = SPI_STM32L496VGT6P_SetProcess( SPIx, SPI_STM32L496VGT6P_ProcessType_None );
                 break;
         }
     }
@@ -764,16 +643,16 @@ static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_ProcessReceive( SPI_STM32L
     return Status;
 }
 
-static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_ProcessTransaction( SPI_STM32L496VGT6P_Instance_t * Instance )
+static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_ProcessTransaction( SPI_STM32L496VGT6P_t SPIx )
 {
     SPI_STM32L496VGT6P_Status_t Status = SPI_STM32L496VGT6P_Status_Success;
 
     do
     {
-        SPI_Trace( "%s( Instance=%p )", __FUNCTION__, Instance );
+        SPI_Trace( "%s( SPIx=%d )", __FUNCTION__, SPIx );
 
-        SPI_STM32L496VGT6P_InstanceContext_t * Context = &SPI_STM32L496VGT6P_Context.Context[ Instance->SPIx ];
-        SPI_STM32L496VGT6P_Process_t * Process = &Context->Process;
+        SPI_STM32L496VGT6P_Instance_t * Instance = &SPI_STM32L496VGT6P_Context.Instance[ SPIx ];
+        SPI_STM32L496VGT6P_Process_t * Process = &Instance->Process;
         SPI_STM32L496VGT6P_Operation_t * Operation = &Process->Context.Operation;
 
         if ( Process->Type != SPI_STM32L496VGT6P_ProcessType_Transaction )
@@ -797,16 +676,16 @@ static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_ProcessTransaction( SPI_ST
         switch ( Operation->Type )
         {
             case SPI_STM32L496VGT6P_OperationType_Pending:
-                Operation->Status = SPI_STM32L496VGT6P_OperationTransactionExecute( Instance );
+                Operation->Status = SPI_STM32L496VGT6P_OperationTransactionExecute( SPIx );
                 break;
 
             case SPI_STM32L496VGT6P_OperationType_Transaction:
             default:
-                if ( Instance->OnComplete != NULL )
+                if ( Instance->OnComplete.Callback != NULL )
                 {
-                    Instance->OnComplete( Instance, Operation->Status );
+                    Instance->OnComplete.Callback( SPIx, Operation->Status, Instance->OnComplete.Context );
                 }
-                Status = SPI_STM32L496VGT6P_SetProcess( Instance, SPI_STM32L496VGT6P_ProcessType_None );
+                Status = SPI_STM32L496VGT6P_SetProcess( SPIx, SPI_STM32L496VGT6P_ProcessType_None );
                 break;
         }
     }
@@ -815,22 +694,22 @@ static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_ProcessTransaction( SPI_ST
     return Status;
 }
 
-static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationCommitExecute( SPI_STM32L496VGT6P_Instance_t * Instance )
+static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationCommitExecute( SPI_STM32L496VGT6P_t SPIx )
 {
     SPI_STM32L496VGT6P_Status_t Status = SPI_STM32L496VGT6P_Status_Success;
 
     do
     {
-        SPI_Trace( "%s( Instance=%p )", __FUNCTION__, Instance );
+        SPI_Trace( "%s( SPIx=%d )", __FUNCTION__, SPIx );
 
-        SPI_STM32L496VGT6P_InstanceContext_t * Context = &SPI_STM32L496VGT6P_Context.Context[ Instance->SPIx ];
-        SPI_STM32L496VGT6P_Process_t * Process = &Context->Process;
+        SPI_STM32L496VGT6P_Instance_t * Instance = &SPI_STM32L496VGT6P_Context.Instance[ SPIx ];
+        SPI_STM32L496VGT6P_Process_t * Process = &Instance->Process;
         SPI_STM32L496VGT6P_Operation_t * Operation = &Process->Context.Operation;
 
     // FIXME Keep CubeMX generated configurations as is for now
     #if 0
     HAL_StatusTypeDef HAL_Status = HAL_ERROR;
-    if ( ( HAL_Status = HAL_SPI_Init( &Instance->Context->SPIx ) ) != HAL_OK )
+    if ( ( HAL_Status = HAL_SPI_Init( &Instance->Instance->SPIx ) ) != HAL_OK )
     {
       Status = SPI_STM32L496VGT6P_Status_Error;
       break;
@@ -854,16 +733,16 @@ static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationCommitExecute( SP
     return Status;
 }
 
-static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationCommitResolve( SPI_STM32L496VGT6P_Instance_t * Instance )
+static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationCommitResolve( SPI_STM32L496VGT6P_t SPIx )
 {
     SPI_STM32L496VGT6P_Status_t Status = SPI_STM32L496VGT6P_Status_Success;
 
     do
     {
-        SPI_Trace( "%s( Instance=%p )", __FUNCTION__, Instance );
+        SPI_Trace( "%s( SPIx=%d )", __FUNCTION__, SPIx );
 
-        SPI_STM32L496VGT6P_InstanceContext_t * Context = &SPI_STM32L496VGT6P_Context.Context[ Instance->SPIx ];
-        SPI_STM32L496VGT6P_Process_t * Process = &Context->Process;
+        SPI_STM32L496VGT6P_Instance_t * Instance = &SPI_STM32L496VGT6P_Context.Instance[ SPIx ];
+        SPI_STM32L496VGT6P_Process_t * Process = &Instance->Process;
         SPI_STM32L496VGT6P_Operation_t * Operation = &Process->Context.Operation;
 
         if ( Operation->Type != SPI_STM32L496VGT6P_OperationType_Commit )
@@ -886,20 +765,20 @@ static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationCommitResolve( SP
     return Status;
 }
 
-static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationTransmitExecute( SPI_STM32L496VGT6P_Instance_t * Instance )
+static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationTransmitExecute( SPI_STM32L496VGT6P_t SPIx )
 {
     SPI_STM32L496VGT6P_Status_t Status = SPI_STM32L496VGT6P_Status_Success;
 
     do
     {
-        SPI_Trace( "%s( Instance=%p )", __FUNCTION__, Instance );
+        SPI_Trace( "%s( SPIx=%d )", __FUNCTION__, SPIx );
 
-        SPI_STM32L496VGT6P_InstanceContext_t * Context = &SPI_STM32L496VGT6P_Context.Context[ Instance->SPIx ];
-        SPI_STM32L496VGT6P_Process_t * Process = &Context->Process;
+        SPI_STM32L496VGT6P_Instance_t * Instance = &SPI_STM32L496VGT6P_Context.Instance[ SPIx ];
+        SPI_STM32L496VGT6P_Process_t * Process = &Instance->Process;
         SPI_STM32L496VGT6P_Operation_t * Operation = &Process->Context.Operation;
 
         HAL_StatusTypeDef HAL_Status = HAL_ERROR;
-        if ( ( HAL_Status = HAL_SPI_Transmit_DMA( &Context->SPIx, Operation->Context.DataTx, Operation->Context.DataTxLength ) ) != HAL_OK )
+        if ( ( HAL_Status = HAL_SPI_Transmit_DMA( &Instance->SPIx, Operation->Context.DataTx, Operation->Context.DataTxLength ) ) != HAL_OK )
         {
             Status = SPI_STM32L496VGT6P_Status_Error;
             break;
@@ -922,16 +801,16 @@ static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationTransmitExecute( 
     return Status;
 }
 
-static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationTransmitResolve( SPI_STM32L496VGT6P_Instance_t * Instance )
+static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationTransmitResolve( SPI_STM32L496VGT6P_t SPIx )
 {
     SPI_STM32L496VGT6P_Status_t Status = SPI_STM32L496VGT6P_Status_Success;
 
     do
     {
-        SPI_Trace( "%s( Instance=%p )", __FUNCTION__, Instance );
+        SPI_Trace( "%s( SPIx=%d )", __FUNCTION__, SPIx );
 
-        SPI_STM32L496VGT6P_InstanceContext_t * Context = &SPI_STM32L496VGT6P_Context.Context[ Instance->SPIx ];
-        SPI_STM32L496VGT6P_Process_t * Process = &Context->Process;
+        SPI_STM32L496VGT6P_Instance_t * Instance = &SPI_STM32L496VGT6P_Context.Instance[ SPIx ];
+        SPI_STM32L496VGT6P_Process_t * Process = &Instance->Process;
         SPI_STM32L496VGT6P_Operation_t * Operation = &Process->Context.Operation;
 
         if ( Operation->Type != SPI_STM32L496VGT6P_OperationType_Transmit )
@@ -949,7 +828,7 @@ static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationTransmitResolve( 
             break;
         }
 
-        if ( ( Context->Event & SPI_STM32L496VGT6P_Event_TxComplete ) == SPI_STM32L496VGT6P_Event_TxComplete )
+        if ( ( Instance->Event & SPI_STM32L496VGT6P_Event_TxComplete ) == SPI_STM32L496VGT6P_Event_TxComplete )
         {
             Operation->Status = SPI_STM32L496VGT6P_Status_Success;
             Operation->Handler = NULL;
@@ -960,20 +839,20 @@ static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationTransmitResolve( 
     return Status;
 }
 
-static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationReceiveExecute( SPI_STM32L496VGT6P_Instance_t * Instance )
+static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationReceiveExecute( SPI_STM32L496VGT6P_t SPIx )
 {
     SPI_STM32L496VGT6P_Status_t Status = SPI_STM32L496VGT6P_Status_Success;
 
     do
     {
-        SPI_Trace( "%s( Instance=%p )", __FUNCTION__, Instance );
+        SPI_Trace( "%s( SPIx=%d )", __FUNCTION__, SPIx );
 
-        SPI_STM32L496VGT6P_InstanceContext_t * Context = &SPI_STM32L496VGT6P_Context.Context[ Instance->SPIx ];
-        SPI_STM32L496VGT6P_Process_t * Process = &Context->Process;
+        SPI_STM32L496VGT6P_Instance_t * Instance = &SPI_STM32L496VGT6P_Context.Instance[ SPIx ];
+        SPI_STM32L496VGT6P_Process_t * Process = &Instance->Process;
         SPI_STM32L496VGT6P_Operation_t * Operation = &Process->Context.Operation;
 
         HAL_StatusTypeDef HAL_Status = HAL_ERROR;
-        if ( ( HAL_Status = HAL_SPI_Receive_DMA( &Context->SPIx, Operation->Context.DataRx, Operation->Context.DataRxLength ) ) != HAL_OK )
+        if ( ( HAL_Status = HAL_SPI_Receive_DMA( &Instance->SPIx, Operation->Context.DataRx, Operation->Context.DataRxLength ) ) != HAL_OK )
         {
             Status = SPI_STM32L496VGT6P_Status_Error;
             break;
@@ -996,16 +875,16 @@ static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationReceiveExecute( S
     return Status;
 }
 
-static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationReceiveResolve( SPI_STM32L496VGT6P_Instance_t * Instance )
+static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationReceiveResolve( SPI_STM32L496VGT6P_t SPIx )
 {
     SPI_STM32L496VGT6P_Status_t Status = SPI_STM32L496VGT6P_Status_Success;
 
     do
     {
-        SPI_Trace( "%s( Instance=%p )", __FUNCTION__, Instance );
+        SPI_Trace( "%s( SPIx=%d )", __FUNCTION__, SPIx );
 
-        SPI_STM32L496VGT6P_InstanceContext_t * Context = &SPI_STM32L496VGT6P_Context.Context[ Instance->SPIx ];
-        SPI_STM32L496VGT6P_Process_t * Process = &Context->Process;
+        SPI_STM32L496VGT6P_Instance_t * Instance = &SPI_STM32L496VGT6P_Context.Instance[ SPIx ];
+        SPI_STM32L496VGT6P_Process_t * Process = &Instance->Process;
         SPI_STM32L496VGT6P_Operation_t * Operation = &Process->Context.Operation;
 
         if ( Operation->Type != SPI_STM32L496VGT6P_OperationType_Receive )
@@ -1023,7 +902,7 @@ static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationReceiveResolve( S
             break;
         }
 
-        if ( ( Context->Event & SPI_STM32L496VGT6P_Event_RxComplete ) != 0 )
+        if ( ( Instance->Event & SPI_STM32L496VGT6P_Event_RxComplete ) != 0 )
         {
             Operation->Status = SPI_STM32L496VGT6P_Status_Success;
             Operation->Handler = NULL;
@@ -1034,20 +913,20 @@ static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationReceiveResolve( S
     return Status;
 }
 
-static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationTransactionExecute( SPI_STM32L496VGT6P_Instance_t * Instance )
+static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationTransactionExecute( SPI_STM32L496VGT6P_t SPIx )
 {
     SPI_STM32L496VGT6P_Status_t Status = SPI_STM32L496VGT6P_Status_Success;
 
     do
     {
-        SPI_Trace( "%s( Instance=%p )", __FUNCTION__, Instance );
+        SPI_Trace( "%s( SPIx=%d )", __FUNCTION__, SPIx );
 
-        SPI_STM32L496VGT6P_InstanceContext_t * Context = &SPI_STM32L496VGT6P_Context.Context[ Instance->SPIx ];
-        SPI_STM32L496VGT6P_Process_t * Process = &Context->Process;
+        SPI_STM32L496VGT6P_Instance_t * Instance = &SPI_STM32L496VGT6P_Context.Instance[ SPIx ];
+        SPI_STM32L496VGT6P_Process_t * Process = &Instance->Process;
         SPI_STM32L496VGT6P_Operation_t * Operation = &Process->Context.Operation;
 
         HAL_StatusTypeDef HAL_Status = HAL_ERROR;
-        if ( ( HAL_Status = HAL_SPI_TransmitReceive_DMA( &Context->SPIx, Operation->Context.DataTx, Operation->Context.DataRx, UTIL_Max( Operation->Context.DataTxLength, Operation->Context.DataRxLength ) ) ) != HAL_OK )
+        if ( ( HAL_Status = HAL_SPI_TransmitReceive_DMA( &Instance->SPIx, Operation->Context.DataTx, Operation->Context.DataRx, UTIL_Max( Operation->Context.DataTxLength, Operation->Context.DataRxLength ) ) ) != HAL_OK )
         {
             Status = SPI_STM32L496VGT6P_Status_Error;
             break;
@@ -1070,16 +949,16 @@ static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationTransactionExecut
     return Status;
 }
 
-static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationTransactionResolve( SPI_STM32L496VGT6P_Instance_t * Instance )
+static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationTransactionResolve( SPI_STM32L496VGT6P_t SPIx )
 {
     SPI_STM32L496VGT6P_Status_t Status = SPI_STM32L496VGT6P_Status_Success;
 
     do
     {
-        SPI_Trace( "%s( Instance=%p )", __FUNCTION__, Instance );
+        SPI_Trace( "%s( SPIx=%d )", __FUNCTION__, SPIx );
 
-        SPI_STM32L496VGT6P_InstanceContext_t * Context = &SPI_STM32L496VGT6P_Context.Context[ Instance->SPIx ];
-        SPI_STM32L496VGT6P_Process_t * Process = &Context->Process;
+        SPI_STM32L496VGT6P_Instance_t * Instance = &SPI_STM32L496VGT6P_Context.Instance[ SPIx ];
+        SPI_STM32L496VGT6P_Process_t * Process = &Instance->Process;
         SPI_STM32L496VGT6P_Operation_t * Operation = &Process->Context.Operation;
 
         if ( Operation->Type != SPI_STM32L496VGT6P_OperationType_Transaction )
@@ -1097,7 +976,7 @@ static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationTransactionResolv
             break;
         }
 
-        if ( ( Context->Event & ( SPI_STM32L496VGT6P_Event_TxComplete | SPI_STM32L496VGT6P_Event_RxComplete ) ) == ( SPI_STM32L496VGT6P_Event_TxComplete | SPI_STM32L496VGT6P_Event_RxComplete ) )
+        if ( ( Instance->Event & ( SPI_STM32L496VGT6P_Event_TxComplete | SPI_STM32L496VGT6P_Event_RxComplete ) ) == ( SPI_STM32L496VGT6P_Event_TxComplete | SPI_STM32L496VGT6P_Event_RxComplete ) )
         {
             Operation->Status = SPI_STM32L496VGT6P_Status_Success;
             Operation->Handler = NULL;
@@ -1112,62 +991,111 @@ static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationTransactionResolv
 // #### Public Method(s) #######################################################
 // #############################################################################
 
-SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Initialize( SPI_STM32L496VGT6P_Instance_t * Instance )
+SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Initialize( SPI_STM32L496VGT6P_t SPIx )
 {
-    SPI_STM32L496VGT6P_Status_t Status = SPI_STM32L496VGT6P_Status_Error;
+    SPI_STM32L496VGT6P_Status_t Status = SPI_STM32L496VGT6P_Status_Success;
 
     do
     {
-        SPI_Trace( "%s( Instance=%p )", __FUNCTION__, Instance );
-
-        if ( Instance == NULL )
-        {
-            Status = SPI_STM32L496VGT6P_Status_ArgumentInvalid;
-            break;
-        }
+        SPI_Trace( "%s( SPIx=%d )", __FUNCTION__, SPIx );
 
         if ( ( Status = SPI_STM32L496VGT6P_Context_Initialize( ) ) != SPI_STM32L496VGT6P_Status_Success )
         {
             break;
         }
 
-        if ( ( Status = SPI_STM32L496VGT6P_Instance_Initialize( Instance ) ) != SPI_STM32L496VGT6P_Status_Success )
-        {
-            break;
-        }
+        SPI_STM32L496VGT6P_Instance_t * Instance = &SPI_STM32L496VGT6P_Context.Instance[ SPIx ];
+
+        // TODO GPIOs Configurations
+
+        Instance->Event = SPI_STM32L496VGT6P_Event_None;
+
+        Status = SPI_STM32L496VGT6P_SetProcess( SPIx, SPI_STM32L496VGT6P_ProcessType_Initialize );
     }
     while ( 0 );
 
     return Status;
 }
 
-SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Cycle( SPI_STM32L496VGT6P_Instance_t * Instance )
+SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Cycle( SPI_STM32L496VGT6P_t SPIx )
 {
-    SPI_STM32L496VGT6P_Status_t Status = SPI_STM32L496VGT6P_Status_Error;
+    SPI_STM32L496VGT6P_Status_t Status = SPI_STM32L496VGT6P_Status_Success;
+
     do
     {
-        SPI_Trace( "%s( Instance=%p )", __FUNCTION__, Instance );
-
-        if ( Instance == NULL )
-        {
-            Status = SPI_STM32L496VGT6P_Status_ArgumentInvalid;
-            break;
-        }
-
-        if ( Instance->Context == NULL )
-        {
-            Status = SPI_STM32L496VGT6P_Status_Error;
-            break;
-        }
+        SPI_Trace( "%s( SPIx=%d )", __FUNCTION__, SPIx );
 
         if ( ( Status = SPI_STM32L496VGT6P_Context_Cycle( ) ) != SPI_STM32L496VGT6P_Status_Success )
         {
             break;
         }
 
-        if ( ( Status = SPI_STM32L496VGT6P_Instance_Cycle( Instance ) ) != SPI_STM32L496VGT6P_Status_Success )
+        SPI_STM32L496VGT6P_Instance_t * Instance = &SPI_STM32L496VGT6P_Context.Instance[ SPIx ];
+        SPI_STM32L496VGT6P_Process_t * Process = &Instance->Process;
+        SPI_STM32L496VGT6P_Operation_t * Operation = &Process->Context.Operation;
+        SPI_STM32L496VGT6P_Event_t Event = Instance->Event; // CAUTION: Has to copy events occurred at the early start of the cycle, so as to be cleared at the end of the cycle,
+                                                            //          which let events occurs after that for the next cycle call
+    #if !SPI_EVENT_CLEAR_WORKAROUND                         //
+        Instance->Event &= ~Event;                          //          Clear captured events
+    #endif
+        if ( Operation->Handler != NULL )
         {
-            break;
+            if ( ( Status = Operation->Handler( SPIx ) ) != SPI_STM32L496VGT6P_Status_Success )
+            {
+                // FIXME Operation reported non success status, is there any action ?
+            }
+        }
+
+        if ( Process->Handler != NULL )
+        {
+            if ( ( Status = Process->Handler( SPIx ) ) != SPI_STM32L496VGT6P_Status_Success )
+            {
+                // FIXME Process reported non success status, is there any action ?
+            }
+        }
+
+    #if SPI_EVENT_CLEAR_WORKAROUND
+        Instance->Event &= ~Event;
+    #endif
+
+        if ( ( Event & SPI_STM32L496VGT6P_Event_Interrupt ) == SPI_STM32L496VGT6P_Event_Interrupt )
+        {
+            Event &= ~SPI_STM32L496VGT6P_Event_Interrupt;
+            SPI_Trace( "Interrupt: Instance=%p, SPIx=%d", Instance, Instance->SPIx );
+            // TODO Invoke Callback
+        }
+
+        if ( ( Event & SPI_STM32L496VGT6P_Event_TxComplete ) == SPI_STM32L496VGT6P_Event_TxComplete )
+        {
+            Event &= ~SPI_STM32L496VGT6P_Event_TxComplete;
+            SPI_Debug( "TX Complete: Instance=%p, SPIx=%d", Instance, Instance->SPIx );
+            // TODO Invoke Callback
+        }
+
+        if ( ( Event & SPI_STM32L496VGT6P_Event_RxComplete ) == SPI_STM32L496VGT6P_Event_RxComplete )
+        {
+            Event &= ~SPI_STM32L496VGT6P_Event_RxComplete;
+            SPI_Debug( "RX Complete: Instance=%p, SPIx=%d", Instance, Instance->SPIx );
+            // TODO Invoke Callback
+        }
+
+        if ( ( Event & SPI_STM32L496VGT6P_Event_Abort ) == SPI_STM32L496VGT6P_Event_Abort )
+        {
+            Event &= ~SPI_STM32L496VGT6P_Event_Abort;
+            SPI_Debug( "Abort: Instance=%p, SPIx=%d", Instance, Instance->SPIx );
+            // TODO Invoke Callback
+        }
+
+        if ( ( Event & SPI_STM32L496VGT6P_Event_Error ) == SPI_STM32L496VGT6P_Event_Error )
+        {
+            Event &= ~SPI_STM32L496VGT6P_Event_Error;
+            SPI_Debug( "Error: Instance=%p, SPIx=%d", Instance, Instance->SPIx );
+            // TODO Invoke Callback
+        }
+
+        if ( Event )
+        {
+            SPI_Warning( "Not handled events %X: SPIx=%d", Event, SPIx );
         }
     }
     while ( 0 );
@@ -1175,30 +1103,15 @@ SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Cycle( SPI_STM32L496VGT6P_Instanc
     return Status;
 }
 
-SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_DeInitialize( SPI_STM32L496VGT6P_Instance_t * Instance )
+SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_DeInitialize( SPI_STM32L496VGT6P_t SPIx )
 {
-    SPI_STM32L496VGT6P_Status_t Status = SPI_STM32L496VGT6P_Status_Error;
+    SPI_STM32L496VGT6P_Status_t Status = SPI_STM32L496VGT6P_Status_Success;
 
     do
     {
-        SPI_Trace( "%s( Instance=%p )", __FUNCTION__, Instance );
+        SPI_Trace( "%s( SPIx=%d )", __FUNCTION__, SPIx );
 
-        if ( Instance == NULL )
-        {
-            Status = SPI_STM32L496VGT6P_Status_ArgumentInvalid;
-            break;
-        }
-
-        if ( Instance->Context == NULL )
-        {
-            Status = SPI_STM32L496VGT6P_Status_Error;
-            break;
-        }
-
-        if ( ( Status = SPI_STM32L496VGT6P_Instance_DeInitialize( Instance ) ) != SPI_STM32L496VGT6P_Status_Success )
-        {
-            break;
-        }
+        // TODO De-Initialize & Disable SPI
 
         if ( ( Status = SPI_STM32L496VGT6P_Context_DeInitialize( ) ) != SPI_STM32L496VGT6P_Status_Success )
         {
@@ -1210,30 +1123,33 @@ SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_DeInitialize( SPI_STM32L496VGT6P_
     return Status;
 }
 
-SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Write( SPI_STM32L496VGT6P_Instance_t * Instance, SPI_STM32L496VGT6P_Data_t * Data, SPI_STM32L496VGT6P_DataLength_t DataLength )
+SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_SetOnComplete( SPI_STM32L496VGT6P_t SPIx, SPI_STM32L496VGT6P_OnComplete_t OnComplete )
 {
-    SPI_STM32L496VGT6P_Status_t Status = SPI_STM32L496VGT6P_Status_Error;
+    SPI_STM32L496VGT6P_Status_t Status = SPI_STM32L496VGT6P_Status_Success;
 
     do
     {
-        SPI_Trace( "%s( Instance=%p )", __FUNCTION__, Instance );
+        SPI_Trace( "%s( SPIx=%d, OnComplete={Callback=%p, Context=%p} )", __FUNCTION__, SPIx, OnComplete.Callback, OnComplete.Context );
 
-        if ( Instance == NULL )
-        {
-            Status = SPI_STM32L496VGT6P_Status_ArgumentInvalid;
-            break;
-        }
+        SPI_STM32L496VGT6P_Instance_t * Instance = &SPI_STM32L496VGT6P_Context.Instance[ SPIx ];
 
-        if ( Instance->Context == NULL )
-        {
-            Status = SPI_STM32L496VGT6P_Status_Error;
-            break;
-        }
+        Instance->OnComplete = OnComplete;
+    }
+    while ( 0 );
 
-        Status = SPI_STM32L496VGT6P_Status_Success;
+    return Status;
+}
 
-        SPI_STM32L496VGT6P_InstanceContext_t * Context = &SPI_STM32L496VGT6P_Context.Context[ Instance->SPIx ];
-        SPI_STM32L496VGT6P_Process_t * Process = &Context->Process;
+SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Write( SPI_STM32L496VGT6P_t SPIx, SPI_STM32L496VGT6P_Data_t * Data, SPI_STM32L496VGT6P_DataLength_t DataLength )
+{
+    SPI_STM32L496VGT6P_Status_t Status = SPI_STM32L496VGT6P_Status_Success;
+
+    do
+    {
+        SPI_Trace( "%s( SPIx=%d )", __FUNCTION__, SPIx );
+
+        SPI_STM32L496VGT6P_Instance_t * Instance = &SPI_STM32L496VGT6P_Context.Instance[ SPIx ];
+        SPI_STM32L496VGT6P_Process_t * Process = &Instance->Process;
         SPI_STM32L496VGT6P_Operation_t * Operation = &Process->Context.Operation;
 
         if ( Process->Type != SPI_STM32L496VGT6P_ProcessType_None
@@ -1243,7 +1159,7 @@ SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Write( SPI_STM32L496VGT6P_Instanc
             break;
         }
 
-        Status = SPI_STM32L496VGT6P_SetProcess( Instance, SPI_STM32L496VGT6P_ProcessType_Transmit );
+        Status = SPI_STM32L496VGT6P_SetProcess( SPIx, SPI_STM32L496VGT6P_ProcessType_Transmit );
 
         Operation->Context.DataTx = Data;
         Operation->Context.DataTxLength = DataLength;
@@ -1253,30 +1169,16 @@ SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Write( SPI_STM32L496VGT6P_Instanc
     return Status;
 }
 
-SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Read( SPI_STM32L496VGT6P_Instance_t * Instance, SPI_STM32L496VGT6P_Data_t * Data, SPI_STM32L496VGT6P_DataLength_t DataLength )
+SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Read( SPI_STM32L496VGT6P_t SPIx, SPI_STM32L496VGT6P_Data_t * Data, SPI_STM32L496VGT6P_DataLength_t DataLength )
 {
-    SPI_STM32L496VGT6P_Status_t Status = SPI_STM32L496VGT6P_Status_Error;
+    SPI_STM32L496VGT6P_Status_t Status = SPI_STM32L496VGT6P_Status_Success;
 
     do
     {
-        SPI_Trace( "%s( Instance=%p )", __FUNCTION__, Instance );
+        SPI_Trace( "%s( SPIx=%d )", __FUNCTION__, SPIx );
 
-        if ( Instance == NULL )
-        {
-            Status = SPI_STM32L496VGT6P_Status_ArgumentInvalid;
-            break;
-        }
-
-        if ( Instance->Context == NULL )
-        {
-            Status = SPI_STM32L496VGT6P_Status_Error;
-            break;
-        }
-
-        Status = SPI_STM32L496VGT6P_Status_Success;
-
-        SPI_STM32L496VGT6P_InstanceContext_t * Context = &SPI_STM32L496VGT6P_Context.Context[ Instance->SPIx ];
-        SPI_STM32L496VGT6P_Process_t * Process = &Context->Process;
+        SPI_STM32L496VGT6P_Instance_t * Instance = &SPI_STM32L496VGT6P_Context.Instance[ SPIx ];
+        SPI_STM32L496VGT6P_Process_t * Process = &Instance->Process;
         SPI_STM32L496VGT6P_Operation_t * Operation = &Process->Context.Operation;
 
         if ( Process->Type != SPI_STM32L496VGT6P_ProcessType_None
@@ -1286,7 +1188,7 @@ SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Read( SPI_STM32L496VGT6P_Instance
             break;
         }
 
-        Status = SPI_STM32L496VGT6P_SetProcess( Instance, SPI_STM32L496VGT6P_ProcessType_Receive );
+        Status = SPI_STM32L496VGT6P_SetProcess( SPIx, SPI_STM32L496VGT6P_ProcessType_Receive );
 
         Operation->Context.DataRx = Data;
         Operation->Context.DataRxLength = DataLength;
@@ -1296,30 +1198,16 @@ SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Read( SPI_STM32L496VGT6P_Instance
     return Status;
 }
 
-SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Transaction( SPI_STM32L496VGT6P_Instance_t * Instance, SPI_STM32L496VGT6P_Data_t * DataTx, SPI_STM32L496VGT6P_DataLength_t DataTxLength, SPI_STM32L496VGT6P_Data_t * DataRx, SPI_STM32L496VGT6P_DataLength_t DataRxLength )
+SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Transaction( SPI_STM32L496VGT6P_t SPIx, SPI_STM32L496VGT6P_Data_t * DataTx, SPI_STM32L496VGT6P_DataLength_t DataTxLength, SPI_STM32L496VGT6P_Data_t * DataRx, SPI_STM32L496VGT6P_DataLength_t DataRxLength )
 {
-    SPI_STM32L496VGT6P_Status_t Status = SPI_STM32L496VGT6P_Status_Error;
+    SPI_STM32L496VGT6P_Status_t Status = SPI_STM32L496VGT6P_Status_Success;
 
     do
     {
-        SPI_Trace( "%s( Instance=%p )", __FUNCTION__, Instance );
+        SPI_Trace( "%s( SPIx=%d )", __FUNCTION__, SPIx );
 
-        if ( Instance == NULL )
-        {
-            Status = SPI_STM32L496VGT6P_Status_ArgumentInvalid;
-            break;
-        }
-
-        if ( Instance->Context == NULL )
-        {
-            Status = SPI_STM32L496VGT6P_Status_Error;
-            break;
-        }
-
-        Status = SPI_STM32L496VGT6P_Status_Success;
-
-        SPI_STM32L496VGT6P_InstanceContext_t * Context = &SPI_STM32L496VGT6P_Context.Context[ Instance->SPIx ];
-        SPI_STM32L496VGT6P_Process_t * Process = &Context->Process;
+        SPI_STM32L496VGT6P_Instance_t * Instance = &SPI_STM32L496VGT6P_Context.Instance[ SPIx ];
+        SPI_STM32L496VGT6P_Process_t * Process = &Instance->Process;
         SPI_STM32L496VGT6P_Operation_t * Operation = &Process->Context.Operation;
 
         if ( Process->Type != SPI_STM32L496VGT6P_ProcessType_None
@@ -1329,7 +1217,7 @@ SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Transaction( SPI_STM32L496VGT6P_I
             break;
         }
 
-        Status = SPI_STM32L496VGT6P_SetProcess( Instance, SPI_STM32L496VGT6P_ProcessType_Transaction );
+        Status = SPI_STM32L496VGT6P_SetProcess( SPIx, SPI_STM32L496VGT6P_ProcessType_Transaction );
 
         Operation->Context.DataTx = DataTx;
         Operation->Context.DataTxLength = DataTxLength;
@@ -1345,7 +1233,7 @@ SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Transaction( SPI_STM32L496VGT6P_I
 // #### Public Variable(s) #####################################################
 // #############################################################################
 
-const char SPI_STM32L496VGT6P_VERSION[] = "0.0.0.v20260412-1852";
+const char SPI_STM32L496VGT6P_VERSION[] = "0.0.0.v20260913-1832";
 
 // #############################################################################
 // #### File Guard #############################################################
