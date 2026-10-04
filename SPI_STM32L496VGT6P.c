@@ -62,7 +62,7 @@
 
 // FIXME Captured events should be cleared just after capturing it
 //       But as for some operations depend on it it must be maintained
-    #define SPI_EVENT_CLEAR_WORKAROUND 1
+    #define EVENT_CLEAR_WORKAROUND 1
 
 // #############################################################################
 // #### Private Type(s) ########################################################
@@ -1035,7 +1035,7 @@ SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Cycle( SPI_STM32L496VGT6P_t SPIx 
         SPI_STM32L496VGT6P_Operation_t * Operation = &Process->Context.Operation;
         SPI_STM32L496VGT6P_Event_t Event = Instance->Event; // CAUTION: Has to copy events occurred at the early start of the cycle, so as to be cleared at the end of the cycle,
                                                             //          which let events occurs after that for the next cycle call
-    #if !SPI_EVENT_CLEAR_WORKAROUND                         //
+    #if !EVENT_CLEAR_WORKAROUND                             //
         Instance->Event &= ~Event;                          //          Clear captured events
     #endif
         if ( Operation->Handler != NULL )
@@ -1054,7 +1054,7 @@ SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Cycle( SPI_STM32L496VGT6P_t SPIx 
             }
         }
 
-    #if SPI_EVENT_CLEAR_WORKAROUND
+    #if EVENT_CLEAR_WORKAROUND
         Instance->Event &= ~Event;
     #endif
 
@@ -1233,7 +1233,7 @@ SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Transaction( SPI_STM32L496VGT6P_t
 // #### Public Variable(s) #####################################################
 // #############################################################################
 
-const char SPI_STM32L496VGT6P_VERSION[] = "0.0.0.v20260913-1832";
+const char SPI_STM32L496VGT6P_VERSION[] = "0.0.0.v20261004-1542";
 
 // #############################################################################
 // #### File Guard #############################################################
