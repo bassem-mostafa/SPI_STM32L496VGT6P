@@ -362,10 +362,12 @@ static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Context_Initialize( void )
     #if 1
         extern SPI_HandleTypeDef hspi1;
         extern DMA_HandleTypeDef hdma_spi1_tx;
+        extern DMA_HandleTypeDef hdma_spi1_rx;
         extern void MX_SPI1_Init( void );
         MX_SPI1_Init( );
         SPI_STM32L496VGT6P_Context.Instance[ SPI_STM32L496VGT6P_1 ].SPIx = hspi1;
         __HAL_LINKDMA( &SPI_STM32L496VGT6P_Context.Instance[ SPI_STM32L496VGT6P_1 ].SPIx, hdmatx, hdma_spi1_tx );
+        __HAL_LINKDMA( &SPI_STM32L496VGT6P_Context.Instance[ SPI_STM32L496VGT6P_1 ].SPIx, hdmarx, hdma_spi1_rx );
 
         extern SPI_HandleTypeDef hspi2;
         extern DMA_HandleTypeDef hdma_spi2_tx;
@@ -1233,7 +1235,7 @@ SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Transaction( SPI_STM32L496VGT6P_t
 // #### Public Variable(s) #####################################################
 // #############################################################################
 
-const char SPI_STM32L496VGT6P_VERSION[] = "0.0.0.v20261101-0430";
+const char SPI_STM32L496VGT6P_VERSION[] = "0.0.0.v20261102-2328";
 
 // #############################################################################
 // #### File Guard #############################################################
