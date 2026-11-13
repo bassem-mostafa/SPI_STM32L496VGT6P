@@ -50,6 +50,8 @@
 // #### Include(s) #############################################################
 // #############################################################################
 
+    #include <stdbool.h>
+
     #include "../../SPI_Internal.h"
     #include "SPI_STM32L496VGT6P.h"
 
@@ -186,6 +188,7 @@ typedef struct SPI_STM32L496VGT6P_Instance
 
 typedef struct SPI_STM32L496VGT6P_Context
 {
+    bool IsInitialized;
     TIM_Timestamp_t Timestamp;
     SPI_STM32L496VGT6P_Instance_t Instance[ SPI_STM32L496VGT6P_Count ];
 } SPI_STM32L496VGT6P_Context_t;
@@ -234,7 +237,9 @@ static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_OperationTransactionResolv
 // #### Private Variable(s) ####################################################
 // #############################################################################
 
-static SPI_STM32L496VGT6P_Context_t SPI_STM32L496VGT6P_Context;
+static SPI_STM32L496VGT6P_Context_t SPI_STM32L496VGT6P_Context = {
+    .IsInitialized = false,
+};
 
 // #############################################################################
 // #### Private Method(s) ######################################################
@@ -357,6 +362,12 @@ static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Context_Initialize( void )
     {
         SPI_Trace( "%s( void )", __FUNCTION__ );
 
+        if ( SPI_STM32L496VGT6P_Context.IsInitialized )
+        {
+            // Already initialized
+            break;
+        }
+
         // FIXME Remove the usage of `MX_SPIx_Init()`
         // FIXME Keep CubeMX generated configurations as is for now
     #if 1
@@ -387,6 +398,8 @@ static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Context_Initialize( void )
         __HAL_LINKDMA( &SPI_STM32L496VGT6P_Context.Instance[ SPI_STM32L496VGT6P_3 ].SPIx, hdmatx, hdma_spi3_tx );
         __HAL_LINKDMA( &SPI_STM32L496VGT6P_Context.Instance[ SPI_STM32L496VGT6P_3 ].SPIx, hdmarx, hdma_spi3_rx );
     #endif
+
+        SPI_STM32L496VGT6P_Context.IsInitialized = true;
     }
     while ( 0 );
 
@@ -400,13 +413,6 @@ static SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Context_Cycle( void )
     do
     {
         SPI_Trace( "%s( void )", __FUNCTION__ );
-
-        TIM_Status_t TIM_Status = TIM_Status_Error;
-        if ( ( TIM_Status = TIM_GetTimestamp( SPI_TIM, &SPI_STM32L496VGT6P_Context.Timestamp ) ) != TIM_Status_Success )
-        {
-            Status = SPI_STM32L496VGT6P_Status_Error;
-            break;
-        }
     }
     while ( 0 );
 
@@ -1022,13 +1028,15 @@ SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Initialize( SPI_STM32L496VGT6P_t 
 SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Cycle( SPI_STM32L496VGT6P_t SPIx )
 {
     SPI_STM32L496VGT6P_Status_t Status = SPI_STM32L496VGT6P_Status_Success;
+    TIM_Status_t TIM_Status = TIM_Status_Success;
 
     do
     {
         SPI_Trace( "%s( SPIx=%d )", __FUNCTION__, SPIx );
 
-        if ( ( Status = SPI_STM32L496VGT6P_Context_Cycle( ) ) != SPI_STM32L496VGT6P_Status_Success )
+        if ( ( TIM_Status = TIM_GetTimestamp( SPI_TIM, &SPI_STM32L496VGT6P_Context.Timestamp ) ) != TIM_Status_Success )
         {
+            Status = SPI_STM32L496VGT6P_Status_Error;
             break;
         }
 
@@ -1235,7 +1243,7 @@ SPI_STM32L496VGT6P_Status_t SPI_STM32L496VGT6P_Transaction( SPI_STM32L496VGT6P_t
 // #### Public Variable(s) #####################################################
 // #############################################################################
 
-const char SPI_STM32L496VGT6P_VERSION[] = "0.0.0.v20261102-2328";
+const char SPI_STM32L496VGT6P_VERSION[] = "0.0.0.v20261113-2312";
 
 // #############################################################################
 // #### File Guard #############################################################
